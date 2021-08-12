@@ -1,4 +1,4 @@
-#Create a ubuntu base image with python 3 installed.
+#base image.
 FROM python:3.9.6
 
 #Set the working directory
