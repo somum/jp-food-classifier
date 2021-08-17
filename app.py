@@ -1,5 +1,6 @@
 import cv2
 import os
+import decimal
 import numpy as np
 from PIL import Image
 from flask import Flask, jsonify, request
@@ -16,28 +17,39 @@ app = Flask(__name__)
 CORS(app)
 CATEGORIES = ['ラメン','すし','天ぷら']
 
-json_file = open("structure_food_classifier.json", 'r')
+json_file = open("structure_food_classifier1.json", 'r')
 loaded_model_json = json_file.read()
 json_file.close()
 model = model_from_json(loaded_model_json)
-model.load_weights("weight_food_classifier.h5")
+model.load_weights("weight_food_classifier1.h5")
 
 @app.route('/food-classifier', methods=['GET', 'POST'])
 @cross_origin()
 def food_classifier():
   if request.method == 'POST':
         if request.files.get('file'):
-            img_data =request.files['file']
-            img_data = Image.open(img_data)
-            img_data = np.array(img_data)
-            img_data = cv2.resize(img_data,(128,128))
-            img_data = np.expand_dims(img_data, axis = 0)
-            prediction = model.predict(img_data)
-            pred_class = CATEGORIES[np.argmax(prediction)]
-
-            pred_result={'item_name':pred_class}
+            try:
+                img_data =request.files['file']
+                img_data = Image.open(img_data)
+                img_data = np.array(img_data)
+                img_data = img_data/255
+                img_data = cv2.resize(img_data,(256,256))
+                img_data = np.expand_dims(img_data, axis = 0)
+                prediction = np.asarray(model.predict(img_data), dtype = decimal.Decimal)
+                if(prediction.max() > 0.5):
+                    pred_class = CATEGORIES[np.argmax(prediction)]
+                    pred_result={'item_name':pred_class}
+                    return jsonify(pred_result)
+                else:
+                    error_message = {'message':'Please try again'}
+                    return jsonify(error_message)
+            except:
+               error_message = {'message':'We are facing some problem. Try after sometime !'}
+               return jsonify(error_message)
   
-  return jsonify(pred_result)
+  else:
+    error_message = {'message':'Please upload a valid image file !'}
+    return jsonify(pred_result)
 
 
 @app.route('/', methods=['GET'])
