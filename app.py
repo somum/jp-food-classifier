@@ -15,27 +15,35 @@ from tensorflow.keras.models import model_from_json
 
 app = Flask(__name__)
 CORS(app)
+
+#classes of foods
 CATEGORIES = ['ラメン','すし','天ぷら']
 
+#loading model & weight
 json_file = open("structure_food_classifier1.json", 'r')
 loaded_model_json = json_file.read()
 json_file.close()
 model = model_from_json(loaded_model_json)
 model.load_weights("weight_food_classifier1.h5")
 
-@app.route('/food-classifier', methods=['GET', 'POST'])
+#classifier page
+@app.route('/food-classifier', methods=['POST'])
 @cross_origin()
 def food_classifier():
   if request.method == 'POST':
+  	    # formdata appended as 'file'
         if request.files.get('file'):
             try:
+            	#processing for feeding into model 
                 img_data =request.files['file']
                 img_data = Image.open(img_data)
                 img_data = np.array(img_data)
                 img_data = img_data/255
                 img_data = cv2.resize(img_data,(256,256))
                 img_data = np.expand_dims(img_data, axis = 0)
+                #feeding into model
                 prediction = np.asarray(model.predict(img_data), dtype = decimal.Decimal)
+                #if the threshold value is more than 50% result will be shown
                 if(prediction.max() > 0.5):
                     pred_class = CATEGORIES[np.argmax(prediction)]
                     pred_result={'item_name':pred_class}
@@ -48,10 +56,11 @@ def food_classifier():
                return jsonify(error_message)
   
   else:
+  	#file checking
     error_message = {'message':'Please upload a valid image file !'}
     return jsonify(pred_result)
 
-
+#index page message
 @app.route('/', methods=['GET'])
 @cross_origin()
 def index():
